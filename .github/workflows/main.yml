@@ -1,0 +1,43 @@
+name: Windows-RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://github.com/ngrok/ngrok/releases/latest/download/ngrok-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip
+
+    - name: Authenticate ngrok
+      run: .\ngrok\ngrok.exe authtoken YOUR_NGROK_AUTH_TOKEN
+
+    - name: Start ngrok tunnel
+      run: Start-Process .\ngrok\ngrok.exe 'tcp 3389'
+
+    - name: Enable RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Create user
+      run: |
+        net user runner123 MyPassword123 /add
+        net localgroup administrators runner123 /add
+
+    - name: Info
+      run: |
+        echo RDP enabled. Use Remote Desktop Client.
+        echo Username: runner123
+        echo Password: MyPassword123
+        echo ngrok public IP will be shown in ngrok logs.
+
+    - name: Keep alive
+      run: |
+        ping 127.0.0.1 -n 999999 > nul
+        
